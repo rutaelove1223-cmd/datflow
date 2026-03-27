@@ -561,7 +561,7 @@ function renderTabs() {
   });
   const add = document.createElement('button');
   add.className='tab tab-add'; add.textContent='+'; add.title='탭 추가';
-  add.onclick=()=>{ state.addTabModal=true; render(); };
+  add.onclick=()=>{ state.addTabModal=true; renderModals(); };
   c.appendChild(add);
 }
 
@@ -681,13 +681,32 @@ function renderSections() {
   const addSecBtn = document.createElement('button');
   addSecBtn.style.cssText='display:block;width:100%;border:0.5px dashed var(--border-mid);border-radius:var(--radius-sm);padding:10px;font-size:13px;color:var(--text-secondary);background:none;cursor:pointer;margin-top:4px;';
   addSecBtn.textContent='+ 섹션 추가';
-  addSecBtn.onclick=()=>{ state.addSectionModal=true; render(); };
+  addSecBtn.onclick=()=>{ state.addSectionModal=true; renderModals(); };
   c.appendChild(addSecBtn);
 
-  /* 탭 추가 모달 */
+}
+
+function closeModal() {
+  const ex = document.getElementById('modal-container');
+  if (ex) ex.remove();
+}
+
+function renderModals() {
+  closeModal();
+  if (!state.addTabModal && !state.addSectionModal) return;
+
+  const wrap = document.createElement('div');
+  wrap.id = 'modal-container';
+  wrap.className = 'modal-overlay';
+  wrap.addEventListener('click', e => {
+    if (e.target === wrap) {
+      state.addTabModal = false; state.addSectionModal = false;
+      closeModal();
+    }
+  });
+
   if (state.addTabModal) {
-    const ov = document.createElement('div'); ov.className='modal-overlay';
-    ov.innerHTML=`<div class="modal"><h3>새 탭 추가</h3>
+    wrap.innerHTML=`<div class="modal"><h3>새 탭 추가</h3>
       <input id="ntl" placeholder="탭 이름" value="${state.newTabLabel}" />
       <select id="ntt">
         <option value="daily" ${state.newTabType==='daily'?'selected':''}>1일</option>
@@ -696,38 +715,36 @@ function renderSections() {
       </select>
       <div class="modal-row"><button class="btn-cancel" id="ctab">취소</button><button class="btn-primary" id="oktab">추가</button></div>
     </div>`;
-    document.getElementById('app-screen').appendChild(ov);
+    document.body.appendChild(wrap);
     document.getElementById('ntl').oninput=e=>state.newTabLabel=e.target.value;
     document.getElementById('ntt').onchange=e=>state.newTabType=e.target.value;
     document.getElementById('ntl').focus();
-    document.getElementById('ctab').onclick=()=>{ state.addTabModal=false; state.newTabLabel=''; render(); };
+    document.getElementById('ctab').onclick=()=>{ state.addTabModal=false; state.newTabLabel=''; closeModal(); };
     document.getElementById('oktab').onclick=()=>{
       const label=state.newTabLabel.trim(); if(!label)return;
       const id=uid();
       state.tabs.push({id,label,type:state.newTabType});
       state.sections[id]=[];
       state.activeTab=id; state.addTabModal=false; state.newTabLabel='';
-      render(); scheduleSave();
+      closeModal(); render(); scheduleSave();
     };
   }
 
-  /* 섹션 추가 모달 */
   if (state.addSectionModal) {
-    const ov = document.createElement('div'); ov.className='modal-overlay';
-    ov.innerHTML=`<div class="modal"><h3>섹션 추가</h3>
+    wrap.innerHTML=`<div class="modal"><h3>섹션 추가</h3>
       <input id="nst" placeholder="섹션 이름" value="${state.newSectionTitle}" />
       <div class="modal-row"><button class="btn-cancel" id="csec">취소</button><button class="btn-primary" id="oksec">추가</button></div>
     </div>`;
-    document.getElementById('app-screen').appendChild(ov);
+    document.body.appendChild(wrap);
     document.getElementById('nst').oninput=e=>state.newSectionTitle=e.target.value;
     document.getElementById('nst').focus();
-    document.getElementById('csec').onclick=()=>{ state.addSectionModal=false; state.newSectionTitle=''; render(); };
+    document.getElementById('csec').onclick=()=>{ state.addSectionModal=false; state.newSectionTitle=''; closeModal(); };
     document.getElementById('oksec').onclick=()=>{
       const title=state.newSectionTitle.trim(); if(!title)return;
       if(!state.sections[state.activeTab]) state.sections[state.activeTab]=[];
       state.sections[state.activeTab].push({id:uid(),title,open:true,memo:'',memoOpen:false,items:[]});
       state.addSectionModal=false; state.newSectionTitle='';
-      render(); scheduleSave();
+      closeModal(); render(); scheduleSave();
     };
   }
 }
