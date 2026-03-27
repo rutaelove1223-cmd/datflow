@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DAYFLOW</title>
+<style>
+:root {
+  --accent: #4F7CFF;
+  --accent-light: #EEF2FF;
+  --success: #22C55E;
+  --success-light: #F0FDF4;
+  --warn: #F59E0B;
+  --warn-light: #FFFBEB;
+  --danger: #EF4444;
+  --danger-light: #FEF2F2;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font: 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f4;
+  --text-primary: #1c1c1e;
+  --text-secondary: #6b6b6b;
+  --text-tertiary: #9ca3af;
+  --border-weak: rgba(0,0,0,0.10);
+  --border-mid: rgba(0,0,0,0.20);
+  --border-strong: rgba(0,0,0,0.35);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #1c1c1e; --bg-secondary: #2c2c2e;
+    --text-primary: #f2f2f7; --text-secondary: #a1a1aa; --text-tertiary: #6b7280;
+    --border-weak: rgba(255,255,255,0.08); --border-mid: rgba(255,255,255,0.16); --border-strong: rgba(255,255,255,0.28);
+    --accent-light: #1e2a4a; --success-light: #0d2a1a; --warn-light: #2a1f05; --danger-light: #2a0f0f;
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg-secondary); min-height: 100vh; color: var(--text-primary); }
+
+/* ── LOGIN SCREEN ── */
+#login-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: var(--bg-secondary);
+}
+.login-card {
+  background: var(--bg-primary); border-radius: 20px; padding: 40px 36px;
+  border: 0.5px solid var(--border-weak); width: 360px; text-align: center;
+}
+.login-logo { font-size: 28px; font-weight: 500; letter-spacing: -1px; color: var(--text-primary); margin-bottom: 6px; }
+.login-logo span { color: var(--accent); }
+.login-sub { font-size: 13px; color: var(--text-tertiary); margin-bottom: 28px; }
+.google-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 11px 16px; border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border-mid); background: var(--bg-primary);
+  cursor: pointer; font-size: 14px; color: var(--text-primary); font-weight: 500;
+  transition: background 0.15s;
+}
+.google-btn:hover { background: var(--bg-secondary); }
+.google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+.sync-note { font-size: 11px; color: var(--text-tertiary); margin-top: 16px; line-height: 1.6; }
+
+/* ── SETUP SCREEN ── */
+#setup-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: var(--bg-secondary);
+}
+.setup-card {
+  background: var(--bg-primary); border-radius: 20px; padding: 32px;
+  border: 0.5px solid var(--border-weak); width: 400px;
+}
+.setup-title { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
+.setup-sub { font-size: 13px; color: var(--text-tertiary); margin-bottom: 24px; line-height: 1.6; }
+.setup-step { background: var(--bg-secondary); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 10px; }
+.setup-step-num { font-size: 11px; font-weight: 500; color: var(--accent); margin-bottom: 4px; }
+.setup-step-text { font-size: 13px; color: var(--text-primary); line-height: 1.6; }
+.setup-step code {
+  background: var(--accent-light); color: var(--accent); border-radius: 4px;
+  padding: 1px 5px; font-size: 12px; font-family: monospace;
+}
+.setup-input-row { display: flex; gap: 8px; margin-top: 16px; }
+.setup-input {
+  flex: 1; border: 0.5px solid var(--border-mid); border-radius: var(--radius-sm);
+  padding: 9px 12px; font-size: 13px; background: var(--bg-secondary);
+  color: var(--text-primary); outline: none; font-family: monospace;
+}
+.setup-input:focus { border-color: var(--accent); background: var(--bg-primary); }
+.setup-error { font-size: 12px; color: var(--danger); margin-top: 8px; display: none; }
+
+/* ── SYNC STATUS BAR ── */
+.sync-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 20px; font-size: 11px;
+  border: 0.5px solid var(--border-weak); background: var(--bg-primary);
+  color: var(--text-tertiary); cursor: default;
+}
+.sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-tertiary); transition: background 0.3s; }
+.sync-dot.synced { background: var(--success); }
+.sync-dot.saving { background: var(--warn); animation: pulse 0.8s infinite; }
+.sync-dot.error { background: var(--danger); }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* ── APP ── */
+#app-screen { display: none; padding: 20px; }
+.app { max-width: 760px; margin: 0 auto; padding: 1rem 0 2rem; }
+.top-bar { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 12px; }
+.top-left { display: flex; align-items: center; gap: 10px; }
+.app-logo { font-size: 17px; font-weight: 500; letter-spacing: -0.5px; color: var(--text-primary); }
+.app-logo span { color: var(--accent); }
+.user-avatar {
+  width: 26px; height: 26px; border-radius: 50%; background: var(--accent-light);
+  display: flex; align-items: center; justify-content: center; font-size: 11px;
+  font-weight: 500; color: var(--accent); overflow: hidden; cursor: pointer;
+  border: 0.5px solid var(--border-weak);
+}
+.user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.top-actions { display: flex; gap: 8px; align-items: center; }
+.btn-icon {
+  background: none; border: 0.5px solid var(--border-weak); border-radius: var(--radius-sm);
+  width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; color: var(--text-secondary); font-size: 15px; transition: background 0.15s;
+}
+.btn-icon:hover { background: var(--bg-secondary); }
+.btn-primary {
+  background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm);
+  padding: 6px 14px; font-size: 13px; cursor: pointer; font-weight: 500; transition: opacity 0.15s;
+}
+.btn-primary:hover { opacity: 0.88; }
+.tabs { display: flex; gap: 4px; padding: 0 0 12px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+  cursor: pointer; border: 0.5px solid var(--border-weak); background: none;
+  color: var(--text-secondary); white-space: nowrap; transition: all 0.15s;
+}
+.tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.tab:hover:not(.active) { background: var(--bg-primary); }
+.tab-add { padding: 6px 12px; font-size: 18px; line-height: 1; }
+.stats-row { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-bottom: 12px; }
+.stat-card { background: var(--bg-primary); border-radius: var(--radius-sm); padding: 10px 12px; }
+.stat-label { font-size: 11px; color: var(--text-tertiary); margin-bottom: 4px; }
+.stat-val { font-size: 20px; font-weight: 500; color: var(--text-primary); }
+.stat-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+.progress-bar { height: 4px; border-radius: 2px; background: var(--border-weak); margin-top: 6px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 2px; background: var(--accent); transition: width 0.4s; }
+.section { background: var(--bg-primary); border: 0.5px solid var(--border-weak); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
+.section-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; user-select: none; }
+.section-title { font-size: 14px; font-weight: 500; color: var(--text-primary); flex: 1; }
+.section-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+.badge-blue { background: var(--accent-light); color: var(--accent); }
+.badge-green { background: var(--success-light); color: var(--success); }
+.badge-amber { background: var(--warn-light); color: var(--warn); }
+.section-chevron { font-size: 12px; color: var(--text-tertiary); transition: transform 0.2s; }
+.section-chevron.open { transform: rotate(90deg); }
+.section-body { border-top: 0.5px solid var(--border-weak); padding: 8px; }
+.todo-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: var(--radius-sm); transition: background 0.1s; }
+.todo-item:hover { background: var(--bg-secondary); }
+.todo-text { flex: 1; font-size: 13px; color: var(--text-primary); line-height: 1.4; }
+.todo-text.done { text-decoration: line-through; color: var(--text-tertiary); }
+.status-btn { width: 28px; height: 28px; border-radius: 50%; border: none; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; flex-shrink: 0; }
+.status-btn:hover { transform: scale(1.15); }
+.status-none { background: var(--bg-secondary); border: 1.5px solid var(--border-mid); }
+.status-check { background: var(--success-light); }
+.status-half { background: var(--warn-light); }
+.status-x { background: var(--danger-light); }
+.add-row { display: flex; gap: 8px; padding: 6px 8px 4px; }
+.add-input { flex: 1; border: 0.5px solid var(--border-mid); border-radius: var(--radius-sm); padding: 7px 10px; font-size: 13px; background: var(--bg-secondary); color: var(--text-primary); outline: none; }
+.add-input:focus { border-color: var(--accent); background: var(--bg-primary); }
+.btn-add { background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); width: 32px; height: 32px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.delete-btn { background: none; border: none; cursor: pointer; color: var(--text-tertiary); font-size: 13px; padding: 2px 4px; border-radius: 4px; opacity: 0; transition: opacity 0.15s; }
+.todo-item:hover .delete-btn { opacity: 1; }
+.delete-btn:hover { color: var(--danger); }
+.memo-btn { background: none; border: none; cursor: pointer; font-size: 13px; padding: 2px 5px; border-radius: 4px; color: var(--text-tertiary); transition: color 0.15s, background 0.15s; flex-shrink: 0; }
+.memo-btn:hover { color: var(--accent); background: var(--accent-light); }
+.memo-indicator { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; margin-left: 2px; }
+.memo-area { border-top: 0.5px solid var(--border-weak); padding: 8px 10px 10px; background: var(--bg-secondary); }
+.memo-label { font-size: 11px; color: var(--text-tertiary); margin-bottom: 5px; }
+.memo-textarea { width: 100%; min-height: 60px; resize: vertical; border: 0.5px solid var(--border-weak); border-radius: var(--radius-sm); padding: 7px 10px; font-size: 12px; font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); outline: none; line-height: 1.6; transition: border-color 0.15s; }
+.memo-textarea:focus { border-color: var(--accent); }
+.memo-textarea::placeholder { color: var(--text-tertiary); }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal { background: var(--bg-primary); border-radius: var(--radius); padding: 20px; width: 320px; border: 0.5px solid var(--border-weak); }
+.modal h3 { font-size: 15px; font-weight: 500; margin-bottom: 14px; color: var(--text-primary); }
+.modal input, .modal select { width: 100%; border: 0.5px solid var(--border-mid); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 13px; background: var(--bg-secondary); color: var(--text-primary); margin-bottom: 10px; outline: none; }
+.modal input:focus, .modal select:focus { border-color: var(--accent); }
+.modal-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+.btn-cancel { background: none; border: 0.5px solid var(--border-mid); border-radius: var(--radius-sm); padding: 7px 14px; font-size: 13px; cursor: pointer; color: var(--text-secondary); }
+.calendar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.calendar-panel { background: var(--bg-primary); border-radius: var(--radius); padding: 18px; width: 340px; border: 0.5px solid var(--border-weak); }
+.cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cal-title { font-size: 15px; font-weight: 500; color: var(--text-primary); }
+.cal-nav { background: none; border: 0.5px solid var(--border-weak); border-radius: 6px; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 14px; }
+.cal-nav:hover { background: var(--bg-secondary); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-day-name { font-size: 11px; color: var(--text-tertiary); text-align: center; padding: 2px 0 6px; }
+.cal-day { height: 36px; border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; transition: background 0.1s; color: var(--text-primary); }
+.cal-day:hover { background: var(--bg-secondary); }
+.cal-day.today { background: var(--accent-light); color: var(--accent); font-weight: 500; }
+.cal-dot { width: 4px; height: 4px; border-radius: 50%; margin-top: 2px; }
+.dot-green { background: var(--success); } .dot-amber { background: var(--warn); } .dot-red { background: var(--danger); }
+.cal-close { width: 100%; margin-top: 14px; }
+.settings-panel { background: var(--bg-primary); border: 0.5px solid var(--border-weak); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
+.settings-title { font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 12px; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.settings-label { font-size: 13px; color: var(--text-secondary); }
+.color-swatches { display: flex; gap: 6px; }
+.swatch { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color 0.15s; }
+.swatch.active { border-color: var(--border-strong); }
+.font-select { font-size: 12px; padding: 4px 8px; border: 0.5px solid var(--border-mid); border-radius: 6px; background: var(--bg-secondary); color: var(--text-primary); cursor: pointer; }
+.logout-btn { font-size: 12px; color: var(--danger); background: none; border: 0.5px solid rgba(239,68,68,0.3); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.logout-btn:hover { background: var(--danger-light); }
+</style>
+</head>
+<body>
+
+<!-- ══ 로그인 화면 ══ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">DAY<span>FLOW</span></div>
+    <div class="login-sub">할 일을 흐름처럼 관리하세요</div>
+    <button class="google-btn" id="btn-google-login">
+      <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Google로 계속하기
+    </button>
+    <div class="sync-note">Google 계정으로 로그인하면 PC·노트북 어디서든<br>데이터가 자동으로 동기화됩니다.</div>
+  </div>
+</div>
+
+<!-- ══ Firebase 설정 화면 ══ -->
+<div id="setup-screen" style="display:none">
+  <div class="setup-card">
+    <div class="setup-title">🔧 Firebase 초기 설정</div>
+    <div class="setup-sub">처음 한 번만 설정하면 이후엔 자동으로 로그인됩니다.<br>아래 단계를 따라 무료 Firebase 프로젝트를 만드세요.</div>
+
+    <div class="setup-step">
+      <div class="setup-step-num">STEP 1</div>
+      <div class="setup-step-text"><a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent)">console.firebase.google.com</a> 접속 → <strong>프로젝트 추가</strong> → 이름 입력 → Google Analytics 비활성화 → 프로젝트 생성</div>
+    </div>
+    <div class="setup-step">
+      <div class="setup-step-num">STEP 2</div>
+      <div class="setup-step-text">좌측 메뉴 <strong>빌드 → Firestore Database</strong> → 데이터베이스 만들기 → <strong>테스트 모드</strong> 선택 → 위치: <code>asia-northeast3</code> (서울)</div>
+    </div>
+    <div class="setup-step">
+      <div class="setup-step-num">STEP 3</div>
+      <div class="setup-step-text">좌측 메뉴 <strong>빌드 → Authentication</strong> → 시작하기 → <strong>Google</strong> 선택 → 사용 설정 ON → 저장</div>
+    </div>
+    <div class="setup-step">
+      <div class="setup-step-num">STEP 4</div>
+      <div class="setup-step-text">좌측 상단 ⚙ 프로젝트 설정 → 내 앱 → <strong>웹 앱 추가(&lt;/&gt;)</strong> → 앱 이름 입력 → <strong>firebaseConfig</strong> 코드 복사</div>
+    </div>
+    <div class="setup-step">
+      <div class="setup-step-num">STEP 5</div>
+      <div class="setup-step-text">복사한 <code>firebaseConfig</code> 객체를 아래에 붙여넣기</div>
+    </div>
+
+    <div class="setup-input-row">
+      <textarea id="config-input" class="setup-input" rows="6" placeholder='여기에 firebaseConfig 객체를 붙여넣으세요.
+
+예시:
+{
+  apiKey: "AIza...",
+  authDomain: "my-app.firebaseapp.com",
+  projectId: "my-app",
+  ...
+}'></textarea>
+    </div>
+    <div id="setup-error" class="setup-error"></div>
+    <div class="setup-input-row" style="margin-top:12px">
+      <button class="btn-primary" style="width:100%;padding:10px" id="btn-save-config">저장하고 시작하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 앱 화면 ══ -->
+<div id="app-screen">
+  <div class="app">
+    <div class="top-bar">
+      <div class="top-left">
+        <div class="app-logo">DAY<span>FLOW</span></div>
+        <div class="user-avatar" id="user-avatar" title="계정"></div>
+      </div>
+      <div class="top-actions">
+        <div class="sync-bar" id="sync-bar">
+          <div class="sync-dot" id="sync-dot"></div>
+          <span id="sync-text">연결 중...</span>
+        </div>
+        <button class="btn-icon" id="btn-cal" title="달력">📅</button>
+        <button class="btn-icon" id="btn-settings" title="설정">⚙</button>
+      </div>
+    </div>
+    <div class="tabs" id="tabs-container"></div>
+    <div class="stats-row" id="stats-row"></div>
+    <div id="sections-container"></div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, onSnapshot }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const STORAGE_KEY = 'dayflow_firebase_config';
+const STATUSES = {
+  none: { emoji: '', label: '' },
+  check: { emoji: '✅', label: '완료 (100%)' },
+  half: { emoji: '🔶', label: '진행중 (50%)' },
+  x: { emoji: '❌', label: '미완 (0%)' }
+};
+const STATUS_CYCLE = ['none', 'check', 'half', 'x'];
+const today = new Date();
+const todayStr = today.toISOString().slice(0, 10);
+function addDays(s, n) { const d = new Date(s); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+
+let app, auth, db, currentUser, unsubscribe;
+let saveTimer = null;
+let state = null;
+
+/* ── 기본 state ── */
+function defaultState() {
+  return {
+    activeTab: 'daily',
+    tabs: [
+      { id: 'daily', label: '1일', type: 'daily' },
+      { id: 'weekly', label: '1주일', type: 'period' },
+      { id: 'proj1', label: '품질경영기사', type: 'project' },
+      { id: 'proj2', label: '종합설계', type: 'project' },
+    ],
+    sections: {
+      daily: [
+        { id: 's1', title: '아침 루틴', open: true, memo: '', memoOpen: false, items: [
+          { id: 'i1', text: '운동 30분', status: 'none' },
+          { id: 'i2', text: '독서 20분', status: 'none' },
+        ]},
+        { id: 's2', title: '업무', open: true, memo: '', memoOpen: false, items: [
+          { id: 'i3', text: '이메일 확인', status: 'none' },
+        ]},
+      ],
+      weekly: [
+        { id: 's3', title: '학습', open: true, memo: '', memoOpen: false, items: [
+          { id: 'i5', text: '통계 파트 복습', status: 'none' },
+        ]},
+      ],
+      proj1: [
+        { id: 's4', title: '필기 준비', open: true, memo: '', memoOpen: false, items: [
+          { id: 'i7', text: '1과목 공부', status: 'none' },
+          { id: 'i8', text: '2과목 공부', status: 'none' },
+          { id: 'i9', text: '기출 풀기', status: 'none' },
+        ]},
+      ],
+      proj2: [
+        { id: 's5', title: '설계 문서', open: true, memo: '', memoOpen: false, items: [
+          { id: 'i11', text: '요구사항 분석', status: 'none' },
+          { id: 'i12', text: '회로도 작성', status: 'none' },
+        ]},
+      ],
+    },
+    settings: { accentColor: '#4F7CFF', fontSize: 'normal' },
+    calDots: {},
+    nextId: 100,
+    showCalendar: false,
+    showSettings: false,
+    calMonth: today.getMonth(),
+    calYear: today.getFullYear(),
+    addTabModal: false, newTabLabel: '', newTabType: 'project',
+    addSectionModal: false, newSectionTitle: '',
+  };
+}
+
+/* ── Firebase 초기화 ── */
+function parseConfig(raw) {
+  raw = raw.trim();
+  if (raw.startsWith('{')) {
+    try { return Function('return (' + raw + ')')(); } catch(e) {}
+  }
+  const m = raw.match(/const\s+firebaseConfig\s*=\s*(\{[\s\S]*?\});/);
+  if (m) { try { return Function('return (' + m[1] + ')')(); } catch(e) {} }
+  throw new Error('파싱 실패');
+}
+
+function initFirebase(config) {
+  app = initializeApp(config);
+  auth = getAuth(app);
+  db = getFirestore(app);
+}
+
+function savedConfig() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch(e) { return null; }
+}
+
+/* ── 화면 전환 ── */
+function showLogin() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'none';
+}
+function showSetup() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'flex';
+  document.getElementById('app-screen').style.display = 'none';
+}
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+}
+
+/* ── 동기화 상태 표시 ── */
+function setSyncStatus(status, text) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  if (!dot || !txt) return;
+  dot.className = 'sync-dot ' + status;
+  txt.textContent = text;
+}
+
+/* ── Firestore 저장 (디바운스 1.5초) ── */
+function scheduleSave() {
+  setSyncStatus('saving', '저장 중...');
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      const payload = JSON.parse(JSON.stringify(state));
+      delete payload.showCalendar; delete payload.showSettings;
+      delete payload.addTabModal; delete payload.newTabLabel; delete payload.newTabType;
+      delete payload.addSectionModal; delete payload.newSectionTitle;
+      Object.values(payload.sections || {}).forEach(secs => {
+        secs.forEach(s => { s.memoOpen = false; });
+      });
+      await setDoc(doc(db, 'users', currentUser.uid, 'data', 'main'), payload);
+      setSyncStatus('synced', '동기화됨');
+    } catch(e) {
+      setSyncStatus('error', '저장 실패');
+    }
+  }, 1500);
+}
+
+/* ── Firestore 실시간 구독 ── */
+function subscribeFirestore() {
+  if (unsubscribe) unsubscribe();
+  const ref = doc(db, 'users', currentUser.uid, 'data', 'main');
+  unsubscribe = onSnapshot(ref, snap => {
+    if (snap.exists()) {
+      const data = snap.data();
+      const uiState = {
+        showCalendar: false, showSettings: false,
+        calMonth: today.getMonth(), calYear: today.getFullYear(),
+        addTabModal: false, newTabLabel: '', newTabType: 'project',
+        addSectionModal: false, newSectionTitle: '',
+      };
+      const prev = state ? { activeTab: state.activeTab, calMonth: state.calMonth, calYear: state.calYear, showCalendar: state.showCalendar, showSettings: state.showSettings } : {};
+      state = { ...defaultState(), ...data, ...uiState, ...prev };
+      setSyncStatus('synced', '동기화됨');
+    } else {
+      if (!state) state = defaultState();
+      setSyncStatus('synced', '새 데이터');
+    }
+    render();
+  }, () => { setSyncStatus('error', '연결 오류'); });
+}
+
+/* ── 로그인 ── */
+async function doGoogleLogin() {
+  const provider = new GoogleAuthProvider();
+  try { await signInWithPopup(auth, provider); }
+  catch(e) { alert('로그인 실패: ' + e.message); }
+}
+
+/* ── 로그아웃 ── */
+async function doLogout() {
+  if (!confirm('로그아웃 하시겠어요?')) return;
+  if (unsubscribe) unsubscribe();
+  await signOut(auth);
+  state = null;
+  showLogin();
+}
+
+/* ── 앱 진입 ── */
+function enterApp(user) {
+  currentUser = user;
+  const av = document.getElementById('user-avatar');
+  if (user.photoURL) {
+    av.innerHTML = `<img src="${user.photoURL}" alt="" />`;
+  } else {
+    av.textContent = (user.displayName || user.email || 'U')[0].toUpperCase();
+  }
+  av.onclick = doLogout;
+  showApp();
+  setSyncStatus('saving', '불러오는 중...');
+  subscribeFirestore();
+}
+
+/* ── 시작 ── */
+const cfg = savedConfig();
+if (cfg) {
+  try {
+    initFirebase(cfg);
+    onAuthStateChanged(auth, user => {
+      if (user) { enterApp(user); }
+      else { showLogin(); }
+    });
+  } catch(e) { showSetup(); }
+} else {
+  showSetup();
+}
+
+/* ── Setup 저장 버튼 ── */
+document.getElementById('btn-save-config').onclick = () => {
+  const raw = document.getElementById('config-input').value;
+  const errEl = document.getElementById('setup-error');
+  errEl.style.display = 'none';
+  try {
+    const config = parseConfig(raw);
+    if (!config.apiKey || !config.projectId) throw new Error('apiKey 또는 projectId가 없습니다.');
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    initFirebase(config);
+    onAuthStateChanged(auth, user => {
+      if (user) { enterApp(user); }
+      else { showLogin(); }
+    });
+  } catch(e) {
+    errEl.textContent = '오류: ' + e.message + ' — firebaseConfig 객체 전체를 붙여넣었는지 확인하세요.';
+    errEl.style.display = 'block';
+  }
+};
+
+/* ── Google 로그인 버튼 ── */
+document.getElementById('btn-google-login').onclick = () => {
+  if (!auth) {
+    showSetup(); return;
+  }
+  doGoogleLogin();
+};
+
+/* ════════════════════════════
+   렌더 함수들
+════════════════════════════ */
+function uid() { return 'id' + (state.nextId++); }
+function calcScore(items) {
+  if (!items.length) return 0;
+  return Math.round(items.reduce((a,i) => a + (i.status==='check'?1:i.status==='half'?0.5:0), 0) / items.length * 100);
+}
+function getAllItems(tabId) { return (state.sections[tabId]||[]).flatMap(s=>s.items); }
+
+function render() {
+  if (!state) return;
+  renderTabs(); renderStats(); renderSections(); renderCalendar(); renderSettings();
+}
+
+function renderTabs() {
+  const c = document.getElementById('tabs-container');
+  c.innerHTML = '';
+  state.tabs.forEach(tab => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (state.activeTab===tab.id?' active':'');
+    b.textContent = tab.label;
+    b.onclick = () => { state.activeTab=tab.id; render(); };
+    c.appendChild(b);
+  });
+  const add = document.createElement('button');
+  add.className='tab tab-add'; add.textContent='+'; add.title='탭 추가';
+  add.onclick=()=>{ state.addTabModal=true; render(); };
+  c.appendChild(add);
+}
+
+function renderStats() {
+  const items = getAllItems(state.activeTab);
+  const score = calcScore(items);
+  const done = items.filter(i=>i.status==='check').length;
+  const half = items.filter(i=>i.status==='half').length;
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card"><div class="stat-label">전체 달성률</div><div class="stat-val">${score}%</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${score}%"></div></div></div>
+    <div class="stat-card"><div class="stat-label">완료 / 전체</div><div class="stat-val">${done} / ${items.length}</div>
+      <div class="stat-sub">진행중 ${half}개</div></div>
+    <div class="stat-card"><div class="stat-label">미완료</div><div class="stat-val">${items.length-done-half}</div>
+      <div class="stat-sub">❌ 표시 제외</div></div>
+  `;
+}
+
+function renderSections() {
+  const c = document.getElementById('sections-container');
+  c.innerHTML = '';
+  const tabId = state.activeTab;
+  (state.sections[tabId]||[]).forEach(sec => {
+    const score = calcScore(sec.items);
+    let bc = score>=80?'badge-green':score>=40?'badge-amber':'badge-blue';
+    const isOpen = sec.open!==false;
+    const hasMemo = sec.memo && sec.memo.trim().length>0;
+    const isMemoOpen = !!sec.memoOpen;
+    const div = document.createElement('div');
+    div.className='section';
+    div.innerHTML = `
+      <div class="section-header">
+        <span class="section-title">${sec.title}</span>
+        <span class="section-badge ${bc}">${score}%</span>
+        <button class="memo-btn" title="메모">📝${hasMemo?'<span class="memo-indicator"></span>':''}</button>
+        <span class="section-chevron ${isOpen?'open':''}">▶</span>
+      </div>
+      <div class="section-body" style="${isOpen?'':'display:none'}">
+        <div class="items-list"></div>
+        <div class="add-row">
+          <input class="add-input" placeholder="할 일 추가..." />
+          <button class="btn-add">+</button>
+        </div>
+        <div class="memo-area" style="${isMemoOpen?'':'display:none'}">
+          <div class="memo-label">📝 메모</div>
+          <textarea class="memo-textarea" placeholder="이 섹션에 대한 메모를 입력하세요...">${sec.memo||''}</textarea>
+        </div>
+      </div>
+    `;
+    c.appendChild(div);
+
+    const header = div.querySelector('.section-header');
+    const chevron = div.querySelector('.section-chevron');
+    const body = div.querySelector('.section-body');
+    header.addEventListener('click', () => {
+      sec.open = !sec.open;
+      chevron.className = 'section-chevron ' + (sec.open?'open':'');
+      body.style.display = sec.open?'':'none';
+      scheduleSave();
+    });
+
+    const memoBtn = div.querySelector('.memo-btn');
+    const memoArea = div.querySelector('.memo-area');
+    memoBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      sec.memoOpen = !sec.memoOpen;
+      if (sec.memoOpen && !sec.open) { sec.open=true; body.style.display=''; chevron.className='section-chevron open'; }
+      memoArea.style.display = sec.memoOpen?'':'none';
+      if (sec.memoOpen) div.querySelector('.memo-textarea').focus();
+    });
+
+    const memoTA = div.querySelector('.memo-textarea');
+    memoTA.addEventListener('input', e => {
+      sec.memo = e.target.value;
+      const ind = memoBtn.querySelector('.memo-indicator');
+      if (sec.memo.trim()) { if (!ind) memoBtn.innerHTML='📝<span class="memo-indicator"></span>'; }
+      else { memoBtn.innerHTML='📝'; }
+      scheduleSave();
+    });
+
+    const itemsList = div.querySelector('.items-list');
+    sec.items.forEach(item => {
+      const row = document.createElement('div');
+      row.className='todo-item';
+      const sc = item.status!=='none'?'status-'+item.status:'status-none';
+      row.innerHTML = `
+        <button class="status-btn ${sc}"><span style="font-size:14px">${STATUSES[item.status]?.emoji||''}</span></button>
+        <span class="todo-text ${item.status==='check'?'done':''}">${item.text}</span>
+        <button class="delete-btn" title="삭제">✕</button>
+      `;
+      itemsList.appendChild(row);
+      row.querySelector('.status-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        const idx = STATUS_CYCLE.indexOf(item.status);
+        item.status = STATUS_CYCLE[(idx+1)%STATUS_CYCLE.length];
+        renderSections(); renderStats(); scheduleSave();
+      });
+      row.querySelector('.delete-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        sec.items = sec.items.filter(x=>x.id!==item.id);
+        renderSections(); renderStats(); scheduleSave();
+      });
+    });
+
+    const addInput = div.querySelector('.add-input');
+    const addBtn = div.querySelector('.btn-add');
+    const doAdd = () => {
+      const text = addInput.value.trim(); if (!text) return;
+      sec.items.push({ id: uid(), text, status: 'none' });
+      addInput.value = '';
+      renderSections(); renderStats(); scheduleSave();
+    };
+    addBtn.addEventListener('click', doAdd);
+    addInput.addEventListener('keydown', e => { if (e.key==='Enter') doAdd(); });
+  });
+
+  const addSecBtn = document.createElement('button');
+  addSecBtn.style.cssText='display:block;width:100%;border:0.5px dashed var(--border-mid);border-radius:var(--radius-sm);padding:10px;font-size:13px;color:var(--text-secondary);background:none;cursor:pointer;margin-top:4px;';
+  addSecBtn.textContent='+ 섹션 추가';
+  addSecBtn.onclick=()=>{ state.addSectionModal=true; render(); };
+  c.appendChild(addSecBtn);
+
+  /* 탭 추가 모달 */
+  if (state.addTabModal) {
+    const ov = document.createElement('div'); ov.className='modal-overlay';
+    ov.innerHTML=`<div class="modal"><h3>새 탭 추가</h3>
+      <input id="ntl" placeholder="탭 이름" value="${state.newTabLabel}" />
+      <select id="ntt">
+        <option value="daily" ${state.newTabType==='daily'?'selected':''}>1일</option>
+        <option value="period" ${state.newTabType==='period'?'selected':''}>사용자 설정 기간</option>
+        <option value="project" ${state.newTabType==='project'?'selected':''}>프로젝트</option>
+      </select>
+      <div class="modal-row"><button class="btn-cancel" id="ctab">취소</button><button class="btn-primary" id="oktab">추가</button></div>
+    </div>`;
+    document.getElementById('app-screen').appendChild(ov);
+    document.getElementById('ntl').oninput=e=>state.newTabLabel=e.target.value;
+    document.getElementById('ntt').onchange=e=>state.newTabType=e.target.value;
+    document.getElementById('ntl').focus();
+    document.getElementById('ctab').onclick=()=>{ state.addTabModal=false; state.newTabLabel=''; render(); };
+    document.getElementById('oktab').onclick=()=>{
+      const label=state.newTabLabel.trim(); if(!label)return;
+      const id=uid();
+      state.tabs.push({id,label,type:state.newTabType});
+      state.sections[id]=[];
+      state.activeTab=id; state.addTabModal=false; state.newTabLabel='';
+      render(); scheduleSave();
+    };
+  }
+
+  /* 섹션 추가 모달 */
+  if (state.addSectionModal) {
+    const ov = document.createElement('div'); ov.className='modal-overlay';
+    ov.innerHTML=`<div class="modal"><h3>섹션 추가</h3>
+      <input id="nst" placeholder="섹션 이름" value="${state.newSectionTitle}" />
+      <div class="modal-row"><button class="btn-cancel" id="csec">취소</button><button class="btn-primary" id="oksec">추가</button></div>
+    </div>`;
+    document.getElementById('app-screen').appendChild(ov);
+    document.getElementById('nst').oninput=e=>state.newSectionTitle=e.target.value;
+    document.getElementById('nst').focus();
+    document.getElementById('csec').onclick=()=>{ state.addSectionModal=false; state.newSectionTitle=''; render(); };
+    document.getElementById('oksec').onclick=()=>{
+      const title=state.newSectionTitle.trim(); if(!title)return;
+      if(!state.sections[state.activeTab]) state.sections[state.activeTab]=[];
+      state.sections[state.activeTab].push({id:uid(),title,open:true,memo:'',memoOpen:false,items:[]});
+      state.addSectionModal=false; state.newSectionTitle='';
+      render(); scheduleSave();
+    };
+  }
+}
+
+function renderCalendar() {
+  const ex=document.getElementById('cal-overlay'); if(ex)ex.remove();
+  if(!state.showCalendar)return;
+  const ov=document.createElement('div'); ov.className='calendar-overlay'; ov.id='cal-overlay';
+  const {calYear:y,calMonth:m}=state;
+  const fd=new Date(y,m,1).getDay(), dim=new Date(y,m+1,0).getDate();
+  const mn=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const dn=['일','월','화','수','목','금','토'];
+  let g=dn.map(d=>`<div class="cal-day-name">${d}</div>`).join('');
+  for(let i=0;i<fd;i++) g+='<div></div>';
+  for(let d=1;d<=dim;d++){
+    const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isT=ds===todayStr;
+    let dot='';
+    if(isT){const items=getAllItems(state.activeTab);const sc=calcScore(items);if(items.length)dot=sc>=80?'dot-green':sc>=40?'dot-amber':'dot-red';}
+    else{const v=state.calDots[ds];if(v)dot=v>=80?'dot-green':v>=40?'dot-amber':'dot-red';}
+    g+=`<div class="cal-day ${isT?'today':''}">${d}${dot?`<div class="cal-dot ${dot}"></div>`:''}</div>`;
+  }
+  ov.innerHTML=`<div class="calendar-panel">
+    <div class="cal-header"><button class="cal-nav" id="cprev">‹</button><div class="cal-title">${y}년 ${mn[m]}</div><button class="cal-nav" id="cnext">›</button></div>
+    <div class="cal-grid">${g}</div>
+    <div style="margin-top:12px;display:flex;gap:12px;font-size:11px;color:var(--text-tertiary);">
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22C55E;margin-right:4px;"></span>80%+</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#F59E0B;margin-right:4px;"></span>40~79%</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#EF4444;margin-right:4px;"></span>40% 미만</span>
+    </div>
+    <button class="btn-primary cal-close" id="cclose">닫기</button>
+  </div>`;
+  document.body.appendChild(ov);
+  document.getElementById('cprev').onclick=()=>{ state.calMonth--; if(state.calMonth<0){state.calMonth=11;state.calYear--;} renderCalendar(); };
+  document.getElementById('cnext').onclick=()=>{ state.calMonth++; if(state.calMonth>11){state.calMonth=0;state.calYear++;} renderCalendar(); };
+  document.getElementById('cclose').onclick=()=>{ state.showCalendar=false; renderCalendar(); };
+  ov.addEventListener('click',e=>{ if(e.target===ov){state.showCalendar=false;renderCalendar();} });
+}
+
+function renderSettings() {
+  const ex=document.getElementById('settings-panel'); if(ex)ex.remove();
+  if(!state.showSettings)return;
+  const panel=document.createElement('div'); panel.className='settings-panel'; panel.id='settings-panel';
+  const accents=['#4F7CFF','#22C55E','#F59E0B','#EF4444','#A855F7','#0EA5E9'];
+  const sw=accents.map(c=>`<div class="swatch ${state.settings.accentColor===c?'active':''}" style="background:${c}" data-color="${c}"></div>`).join('');
+  panel.innerHTML=`<div class="settings-title">⚙ 설정</div>
+    <div class="settings-row"><span class="settings-label">테마 색상</span><div class="color-swatches">${sw}</div></div>
+    <div class="settings-row"><span class="settings-label">글씨 크기</span>
+      <select class="font-select" id="fssel">
+        <option value="small" ${state.settings.fontSize==='small'?'selected':''}>작게</option>
+        <option value="normal" ${state.settings.fontSize==='normal'?'selected':''}>보통</option>
+        <option value="large" ${state.settings.fontSize==='large'?'selected':''}>크게</option>
+      </select></div>
+    <div class="settings-row"><span class="settings-label">현재 탭 이름 변경</span>
+      <input id="rtab" style="width:130px;border:0.5px solid var(--border-mid);border-radius:6px;padding:4px 8px;font-size:13px;background:var(--bg-secondary);color:var(--text-primary);" value="${state.tabs.find(t=>t.id===state.activeTab)?.label||''}" /></div>
+    <div class="settings-row" style="margin-bottom:0"><span class="settings-label">계정</span>
+      <button class="logout-btn" id="logout-btn-s">로그아웃</button></div>
+  `;
+  const sc=document.getElementById('sections-container');
+  sc.parentNode.insertBefore(panel,sc);
+  panel.querySelectorAll('.swatch').forEach(s=>{ s.onclick=()=>{ state.settings.accentColor=s.dataset.color; document.documentElement.style.setProperty('--accent',s.dataset.color); scheduleSave(); renderSettings(); }; });
+  document.getElementById('fssel').onchange=e=>{ state.settings.fontSize=e.target.value; const sz={small:'12px',normal:'13px',large:'15px'}; document.body.style.fontSize=sz[e.target.value]||'13px'; scheduleSave(); };
+  document.getElementById('rtab').oninput=e=>{ const t=state.tabs.find(x=>x.id===state.activeTab); if(t){t.label=e.target.value;renderTabs();scheduleSave();} };
+  document.getElementById('logout-btn-s').onclick=doLogout;
+}
+
+document.getElementById('btn-cal').onclick=()=>{ if(!state)return; state.showCalendar=!state.showCalendar; renderCalendar(); };
+document.getElementById('btn-settings').onclick=()=>{ if(!state)return; state.showSettings=!state.showSettings; render(); };
+
+</script>
+</body>
+</html>
