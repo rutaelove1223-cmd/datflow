@@ -2,9 +2,6 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-title" content="DAYFLOW" />
-<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>DAYFLOW</title>
 <style>
@@ -173,6 +170,29 @@ body { font-family: var(--font); background: var(--bg-secondary); min-height: 10
 .delete-btn { background: none; border: none; cursor: pointer; color: var(--text-tertiary); font-size: 13px; padding: 2px 4px; border-radius: 4px; opacity: 0; transition: opacity 0.15s; }
 .todo-item:hover .delete-btn { opacity: 1; }
 .delete-btn:hover { color: var(--danger); }
+.sec-delete-btn { background: none; border: none; cursor: pointer; font-size: 13px; padding: 2px 5px; border-radius: 4px; color: var(--text-tertiary); opacity: 0; transition: opacity 0.15s, color 0.15s; flex-shrink: 0; }
+.sec-archive-btn { background: none; border: none; cursor: pointer; font-size: 13px; padding: 2px 5px; border-radius: 4px; color: var(--text-tertiary); opacity: 0; transition: opacity 0.15s, color 0.15s; flex-shrink: 0; }
+.section-header:hover .sec-delete-btn,
+.section-header:hover .sec-archive-btn,
+.section-header:hover .sec-rename-btn { opacity: 1; }
+.sec-delete-btn:hover { color: var(--danger); }
+.sec-archive-btn:hover { color: var(--warn); }
+.sec-rename-btn { background: none; border: none; cursor: pointer; font-size: 13px; padding: 2px 5px; border-radius: 4px; color: var(--text-tertiary); opacity: 0; transition: opacity 0.15s, color 0.15s; flex-shrink: 0; }
+.section-header:hover .sec-rename-btn { opacity: 1; }
+.sec-rename-btn:hover { color: var(--accent); }
+.section-title-input { flex: 1; font-size: 14px; font-weight: 500; color: var(--text-primary); background: var(--bg-secondary); border: 0.5px solid var(--accent); border-radius: 6px; padding: 2px 8px; outline: none; font-family: var(--font); }
+.archive-panel { background: var(--bg-primary); border: 0.5px solid var(--border-weak); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
+.archive-header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; cursor: pointer; user-select: none; border-bottom: 0.5px solid var(--border-weak); }
+.archive-header-title { font-size: 13px; font-weight: 500; color: var(--text-secondary); flex: 1; }
+.archive-count { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--bg-secondary); color: var(--text-tertiary); font-weight: 500; }
+.archived-section { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 0.5px solid var(--border-weak); }
+.archived-section:last-child { border-bottom: none; }
+.archived-title { flex: 1; font-size: 13px; color: var(--text-secondary); }
+.archived-score { font-size: 11px; color: var(--text-tertiary); }
+.restore-btn { background: none; border: 0.5px solid var(--border-mid); border-radius: 6px; padding: 3px 10px; font-size: 12px; color: var(--text-secondary); cursor: pointer; transition: background 0.15s; white-space: nowrap; }
+.restore-btn:hover { background: var(--bg-secondary); }
+.archived-del-btn { background: none; border: none; cursor: pointer; color: var(--text-tertiary); font-size: 13px; padding: 2px 4px; border-radius: 4px; }
+.archived-del-btn:hover { color: var(--danger); }
 .memo-btn { background: none; border: none; cursor: pointer; font-size: 13px; padding: 2px 5px; border-radius: 4px; color: var(--text-tertiary); transition: color 0.15s, background 0.15s; flex-shrink: 0; }
 .memo-btn:hover { color: var(--accent); background: var(--accent-light); }
 .memo-indicator { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; margin-left: 2px; }
@@ -369,6 +389,8 @@ function defaultState() {
     calYear: today.getFullYear(),
     addTabModal: false, newTabLabel: '', newTabType: 'project',
     addSectionModal: false, newSectionTitle: '',
+    archived: {},
+    showArchive: false,
   };
 }
 
@@ -426,7 +448,7 @@ function scheduleSave() {
   saveTimer = setTimeout(async () => {
     try {
       const payload = JSON.parse(JSON.stringify(state));
-      delete payload.showCalendar; delete payload.showSettings;
+      delete payload.showCalendar; delete payload.showSettings; delete payload.showArchive;
       delete payload.addTabModal; delete payload.newTabLabel; delete payload.newTabType;
       delete payload.addSectionModal; delete payload.newSectionTitle;
       Object.values(payload.sections || {}).forEach(secs => {
@@ -453,7 +475,7 @@ function subscribeFirestore() {
         addTabModal: false, newTabLabel: '', newTabType: 'project',
         addSectionModal: false, newSectionTitle: '',
       };
-      const prev = state ? { activeTab: state.activeTab, calMonth: state.calMonth, calYear: state.calYear, showCalendar: state.showCalendar, showSettings: state.showSettings } : {};
+      const prev = state ? { activeTab: state.activeTab, calMonth: state.calMonth, calYear: state.calYear, showCalendar: state.showCalendar, showSettings: state.showSettings, showArchive: state.showArchive } : {};
       state = { ...defaultState(), ...data, ...uiState, ...prev };
       setSyncStatus('synced', '동기화됨');
     } else {
@@ -600,6 +622,9 @@ function renderSections() {
         <span class="section-title">${sec.title}</span>
         <span class="section-badge ${bc}">${score}%</span>
         <button class="memo-btn" title="메모">📝${hasMemo?'<span class="memo-indicator"></span>':''}</button>
+        <button class="sec-rename-btn" title="이름 변경">✏️</button>
+        <button class="sec-archive-btn" title="보관">📦</button>
+        <button class="sec-delete-btn" title="섹션 삭제">🗑</button>
         <span class="section-chevron ${isOpen?'open':''}">▶</span>
       </div>
       <div class="section-body" style="${isOpen?'':'display:none'}">
@@ -645,6 +670,53 @@ function renderSections() {
       scheduleSave();
     });
 
+    const secRenameBtn = div.querySelector('.sec-rename-btn');
+    secRenameBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const titleSpan = div.querySelector('.section-title');
+      const currentTitle = sec.title;
+      const input = document.createElement('input');
+      input.className = 'section-title-input';
+      input.value = currentTitle;
+      titleSpan.replaceWith(input);
+      input.focus();
+      input.select();
+      const commit = () => {
+        const newTitle = input.value.trim();
+        if (newTitle && newTitle !== currentTitle) {
+          sec.title = newTitle;
+          scheduleSave();
+        }
+        const span = document.createElement('span');
+        span.className = 'section-title';
+        span.textContent = sec.title;
+        input.replaceWith(span);
+      };
+      input.addEventListener('blur', commit);
+      input.addEventListener('keydown', e2 => {
+        if (e2.key === 'Enter') { e2.preventDefault(); input.blur(); }
+        if (e2.key === 'Escape') { input.value = currentTitle; input.blur(); }
+      });
+      input.addEventListener('click', e2 => e2.stopPropagation());
+    });
+
+    const secArchiveBtn = div.querySelector('.sec-archive-btn');
+    secArchiveBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (!state.archived[tabId]) state.archived[tabId] = [];
+      state.archived[tabId].push({ ...sec, archivedAt: new Date().toISOString() });
+      state.sections[tabId] = state.sections[tabId].filter(x => x.id !== sec.id);
+      renderSections(); renderStats(); scheduleSave();
+    });
+
+    const secDelBtn = div.querySelector('.sec-delete-btn');
+    secDelBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (!confirm(`"${sec.title}" 섹션을 완전히 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`)) return;
+      state.sections[tabId] = state.sections[tabId].filter(x => x.id !== sec.id);
+      renderSections(); renderStats(); scheduleSave();
+    });
+
     const itemsList = div.querySelector('.items-list');
     sec.items.forEach(item => {
       const row = document.createElement('div');
@@ -687,6 +759,64 @@ function renderSections() {
   addSecBtn.onclick=()=>{ state.addSectionModal=true; renderModals(); };
   c.appendChild(addSecBtn);
 
+  renderArchive(c, tabId);
+}
+
+function renderArchive(container, tabId) {
+  const archived = (state.archived && state.archived[tabId]) || [];
+  if (archived.length === 0) return;
+
+  const panel = document.createElement('div');
+  panel.className = 'archive-panel';
+
+  const isOpen = state.showArchive || false;
+  panel.innerHTML = `
+    <div class="archive-header">
+      <span style="font-size:14px">📦</span>
+      <span class="archive-header-title">보관된 섹션</span>
+      <span class="archive-count">${archived.length}개</span>
+      <span class="section-chevron ${isOpen?'open':''}">▶</span>
+    </div>
+    <div class="archive-body" style="${isOpen?'':'display:none'}"></div>
+  `;
+  container.appendChild(panel);
+
+  const archiveHeader = panel.querySelector('.archive-header');
+  const archiveBody = panel.querySelector('.archive-body');
+  const archiveChevron = panel.querySelector('.section-chevron');
+  archiveHeader.addEventListener('click', () => {
+    state.showArchive = !state.showArchive;
+    archiveChevron.className = 'section-chevron ' + (state.showArchive?'open':'');
+    archiveBody.style.display = state.showArchive?'':'none';
+  });
+
+  archived.forEach((sec, idx) => {
+    const score = calcScore(sec.items);
+    const row = document.createElement('div');
+    row.className = 'archived-section';
+    const date = sec.archivedAt ? new Date(sec.archivedAt).toLocaleDateString('ko-KR', {month:'short', day:'numeric'}) : '';
+    row.innerHTML = `
+      <span class="archived-title">${sec.title}</span>
+      <span class="archived-score">${score}% · ${date}</span>
+      <button class="restore-btn" title="복원">↩ 복원</button>
+      <button class="archived-del-btn" title="완전 삭제">✕</button>
+    `;
+    archiveBody.appendChild(row);
+
+    row.querySelector('.restore-btn').addEventListener('click', () => {
+      if (!state.sections[tabId]) state.sections[tabId] = [];
+      const { archivedAt, ...secData } = sec;
+      state.sections[tabId].push(secData);
+      state.archived[tabId].splice(idx, 1);
+      renderSections(); renderStats(); scheduleSave();
+    });
+
+    row.querySelector('.archived-del-btn').addEventListener('click', () => {
+      if (!confirm(`"${sec.title}" 섹션을 완전히 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`)) return;
+      state.archived[tabId].splice(idx, 1);
+      renderSections(); scheduleSave();
+    });
+  });
 }
 
 function closeModal() {
